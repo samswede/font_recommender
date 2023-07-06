@@ -5,16 +5,27 @@ import matplotlib.pyplot as plt
 import torch
 from torch import nn
 import torchvision
-import torchvision.models as pretrained_models
+from torchvision import models
+#import torchvision.models as pretrained_models
 import torch.nn.functional as F
 
 
 class PerceptualLoss(nn.Module):
-    def __init__(self):
+    def __init__(self, vgg16_model_path):
         super(PerceptualLoss, self).__init__()
-        # Load pretrained VGG16 and get the needed layer
-        vgg = pretrained_models.vgg16(pretrained=True).features
-        self.vgg_slice = nn.Sequential(*list(vgg.children())[:4]).eval() # Use up to the second convolutional layer
+        # Initialize the model
+        vgg16_model = models.vgg16()
+
+        # Load the state_dict from the file
+        vgg16_state_dict = torch.load(vgg16_model_path)
+
+        # Update the model's state_dict
+        vgg16_model.load_state_dict(vgg16_state_dict)
+
+        # Get the needed layer (features part up to the second convolutional layer)
+        self.vgg_slice = nn.Sequential(*list(vgg16_model.features.children())[:4]).eval()
+
+        # Freeze the parameters of the vgg_slice layers
         for param in self.vgg_slice.parameters():
             param.requires_grad = False
 
@@ -122,11 +133,13 @@ class Decoder(nn.Module):
     
 
 class VariationalAutoencoder(nn.Module):
-    def __init__(self, latent_dims, optimizer):
+    def __init__(self, latent_dims, vgg16_model_path):
         super(VariationalAutoencoder, self).__init__()
         self.encoder = VariationalEncoder(latent_dims)
         self.decoder = Decoder(latent_dims)
-        self.perceptual_loss = PerceptualLoss()
+        self.perceptual_loss = PerceptualLoss(vgg16_model_path)
+
+    def set_optimizer(self, optimizer):
         self.optimizer = optimizer
 
     def forward(self, x):

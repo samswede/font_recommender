@@ -1,7 +1,7 @@
 import torch
 from utils import *
-from preprocessing import *
 from NEW_variational_autoencoder import *
+from trainer import Trainer
 
 """ TO DO:
    
@@ -11,43 +11,78 @@ from NEW_variational_autoencoder import *
 
 """
 
-# Define the training loop
-def train_model(vae, device, train_loader, valid_loader, test_dataset, optimizer, num_epochs):
-    for epoch in range(num_epochs):
-        train_loss = train_epoch(vae, device, train_loader, optimizer)
-        val_loss = test_epoch(vae, device, valid_loader)
-        if 9 == epoch % 10:
-            print(f'\n EPOCH {epoch + 1}/{num_epochs} \n \t train loss {train_loss} \n \t val loss {val_loss}')
-            plot_ae_outputs(vae.encoder, vae.decoder, test_dataset, device, n=9)
-        if 99 == epoch % 100:
-            save_model(vae, config['model_size'], config['latent_dims'], epoch)
+
+# Define the naming convention
+def model_file_naming_convention(model_size, latent_dims, epoch):
+    model_file_name = f'VAE_S{model_size}_L{latent_dims}_E{epoch}.pt'
+    return model_file_name
 
 # Define the model saving function
-def save_model(model, model_size, d, epoch):
-    model_save_name = '{}_vae_L{}_E{}.pt'.format(model_size, d, epoch+1)
-    model_path = F"/content/drive/MyDrive/FontFinder/Models/VAEs/{model_save_name}" 
+def save_model(model, model_file_name, model_save_folder_path):
+    model_path = F'{model_save_folder_path}/{model_file_name}'
     torch.save(model.state_dict(), model_path)
+
 
 # Define the main function
 def main(config):
-    train_loader, valid_loader, test_loader, train_dataset, test_dataset, transform_norm = prepare_data_loaders(config['dataset_path'])
 
+    # Unpack arguments
+    learning_rate = config['learning_rate']
+    weight_decay = config['weight_decay']
+    num_epochs = config['num_epochs']
+
+    model_size = config['model_size']
+    latent_dims = config['latent_dims']
+
+    dataset_path = config['dataset_path']
+    model_save_folder_path = config['model_save_folder_path']
+    vgg16_model_path = config['vgg16_model_path']
+
+    print_performance_epoch_interval = config['print_performance_epoch_interval']
+    model_save_epoch_interval = config['model_save_epoch_interval']
+
+    # Set replicable random seed
     torch.manual_seed(0)
-    vae = VariationalAutoencoder(latent_dims=config['latent_dims'])
-    optim = torch.optim.Adam(vae.parameters(), lr=config['learning_rate'], weight_decay=1e-5)
 
+    # Set device
     device = torch.device("cuda") if torch.cuda.is_available() else torch.device("cpu")
     print(f'Selected device: {device}')
+
+    # Instantiate classes
+    vae = VariationalAutoencoder(latent_dims= latent_dims, vgg16_model_path= vgg16_model_path)
+    optim = torch.optim.Adam(vae.parameters(), lr= learning_rate, weight_decay= weight_decay)
+    vae.set_optimizer(optim)
+
+    trainer = Trainer(dataset_path= dataset_path, device= device)
+    
+    # Put model onto GPU if it exists
     vae.to(device)
     
-    train_model(vae, device, train_loader, valid_loader, test_dataset, optim, config['num_epochs'])
+
+    for epoch in range(num_epochs):
+        train_loss = trainer.train_epoch(vae)
+        val_loss = trainer.test_epoch(vae)
+        if print_performance_epoch_interval-1 == epoch % print_performance_epoch_interval:
+            print(f'\n EPOCH {epoch + 1}/{num_epochs} \n \t train loss {train_loss} \n \t val loss {val_loss}')
+            plot_ae_outputs(vae.encoder, vae.decoder, trainer.test_dataset, device, n=9)
+        if model_save_epoch_interval-1 == epoch % model_save_epoch_interval:
+            model_file_name = model_file_naming_convention(model_size, latent_dims, epoch)
+            save_model(vae, model_file_name, model_save_folder_path)
 
 if __name__ == "__main__":
     config = {
         'dataset_path': 'path_to_dataset',
+
         'latent_dims': 9,
         'num_epochs': 20,
         'learning_rate': 0.00005,
-        'model_size': 'big'
+        'weight_decay': 1e-5,
+        'model_size': 'big', 
+
+        'model_save_folder_path': '',
+        'vgg16_model_path': './models/vgg16.pth',
+
+        'model_save_epoch_interval': 100,
+        'print_performance_epoch_interval': 10
     }
     main(config)

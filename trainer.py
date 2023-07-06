@@ -1,76 +1,130 @@
-import numpy as np
-import os
-import pickle
-import matplotlib.pyplot as plt
 import torch
-from torch import nn
 import torchvision
-import torchvision.models as pretrained_models
-import torch.nn.functional as F
 
-
-class PerceptualLoss(nn.Module):
-    def __init__(self):
-        super(PerceptualLoss, self).__init__()
-        # Load pretrained VGG16 and get the needed layer
-        vgg = pretrained_models.vgg16(pretrained=True).features
-        self.vgg_slice = nn.Sequential(*list(vgg.children())[:4]).eval() # Use up to the second convolutional layer
-        for param in self.vgg_slice.parameters():
-            param.requires_grad = False
-
-    def forward(self, x, y):
-        # Compute feature representations
-        x_features = self.vgg_slice(x)
-        y_features = self.vgg_slice(y)
-        # Compute the Mean Squared Error in feature space
-        return F.mse_loss(x_features, y_features)
+from torchvision import transforms
+from torch.utils.data import DataLoader,random_split
 
 
 class Trainer():
-    def __init__(self, model, optimizer, dataloader, device):
-        self.perceptual_loss = PerceptualLoss()
-        self.
+    def __init__(self, dataset_path, device):
 
+        self.batch_size = 32
+        self.image_size = (128, 128)
+        
+        #split = [int(m*0.9), int(m*0.1)]
+        split = [850, 65]   # hard coded split (total 915 in dataset)
+        self.prepare_data_loaders(dataset_path, split)
 
-def train_epoch(vae, device, dataloader, optimizer, perceptual_loss=None):
-    # Set train mode for both the encoder and the decoder
-    vae.train()
-    train_loss = 0.0
-    # Use the MSE loss if perceptual_loss is not provided
-    loss_fn = nn.MSELoss(reduction='sum') if perceptual_loss is None else perceptual_loss
-    # Iterate the dataloader (we do not need the label values, this is unsupervised learning)
-    for x, _ in dataloader: 
-        # Move tensor to the proper device
-        x = x.to(device)
-        x_hat = vae(x)
-        # Evaluate loss
-        loss = loss_fn(x, x_hat) + vae.encoder.kl
-        # Backward pass
-        optimizer.zero_grad()
-        loss.backward()
-        optimizer.step()
-        # Accumulate the batch loss
-        train_loss += loss.item()
-    # Return the average loss
-    return train_loss / len(dataloader.dataset)
+        self.device = device
+        self.size_dataset = len(self.train_loader.dataset)
 
+        
+        
+    def set_batch_size(self, batch_size):
+        self.batch_size = batch_size
+    
+    def set_image_size(self, image_size):
+        self.image_size = image_size
 
-def test_epoch(vae, device, dataloader, perceptual_loss=None):
-    # Set evaluation mode for encoder and decoder
-    vae.eval()
-    val_loss = 0.0
-    # Use the MSE loss if perceptual_loss is not provided
-    loss_fn = nn.MSELoss(reduction='sum') if perceptual_loss is None else perceptual_loss
-    with torch.no_grad(): # No need to track the gradients
-        for x, _ in dataloader:
+    def train_epoch(self, model):
+        """
+        """
+        train_loss = 0.0
+
+        # Iterate the dataloader (we do not need the label values, this is unsupervised learning)
+        for x, _ in self.train_loader: 
             # Move tensor to the proper device
-            x = x.to(device)
-            # Forward pass through the VAE
-            x_hat = vae(x)
-            # Compute the loss
-            loss = loss_fn(x, x_hat) + vae.encoder.kl
+            x = x.to(self.device)
+            # Forward pass and Backpropagation
+            loss = model.back_prop(x)
             # Accumulate the batch loss
-            val_loss += loss.item()
-    # Return the average loss
-    return val_loss / len(dataloader.dataset)
+            train_loss += loss.item()
+        # Return the average loss
+        return train_loss / self.size_dataset
+    
+    def test_epoch(self, model):
+        """
+        """
+        val_loss = 0.0
+
+        with torch.no_grad(): # No need to track the gradients
+            for x, _ in self.test_loader:
+                # Move tensor to the proper device
+                x = x.to(self.device)
+                # Forward pass through the VAE
+                x_hat = model.forward(x)
+                # Compute the loss
+                loss = model.perceptual_loss(x, x_hat) + model.encoder.kl
+                # Accumulate the batch loss
+                val_loss += loss.item()
+        # Return the average loss
+        return val_loss / self.size_dataset
+
+    def get_mean_and_std(self, loader):
+        mean = 0.
+        std = 0.
+        total_images_count = 0
+        for images, _ in loader:
+            image_count_in_a_batch = images.size(0)
+            images = images.view(image_count_in_a_batch, images.size(1), -1)
+            mean += images.mean(2).sum(0)
+            std += images.std(2).sum(0)
+            total_images_count += image_count_in_a_batch
+
+        mean /= total_images_count
+        std /= total_images_count
+
+        return mean, std
+    
+    def prepare_initial_data_loader(self, dataset_path):
+
+        # Initial transform
+        initial_transform = transforms.Compose([
+            transforms.Resize(self.image_size),
+            transforms.ToTensor(),
+            transforms.Grayscale(num_output_channels=1)
+        ])
+
+        # Define initial train & test dataset
+        initial_train_dataset = torchvision.datasets.ImageFolder(root=dataset_path, transform=initial_transform)
+
+        # Create initial loaders
+        initial_train_loader = torch.utils.data.DataLoader(initial_train_dataset, batch_size=self.batch_size, shuffle=True)
+        return initial_train_loader
+
+    def prepare_data_loaders(self, dataset_path, split):
+
+        #split = [int(m*0.9), int(m*0.1)]
+        self.split = split
+
+        initial_train_loader = self.prepare_initial_data_loader(dataset_path)
+
+        # Compute mean and standard deviation
+        mean, std = self.get_mean_and_std(initial_train_loader)
+
+        print(f'mean: {mean}')
+        print(f'std: {std}')
+
+        # Transform with normalization
+        self.transform_norm = transforms.Compose([
+            transforms.Resize(self.image_size),
+            transforms.ToTensor(),
+            transforms.Normalize(mean, std),
+            transforms.Grayscale(num_output_channels=1)
+        ])
+
+        # Redefine train & test dataset with normalization
+        self.train_dataset = torchvision.datasets.ImageFolder(root=dataset_path, transform=self.transform_norm)
+        self.test_dataset = torchvision.datasets.ImageFolder(root=dataset_path, transform=self.transform_norm)
+
+        m = len(self.train_dataset)
+        print(f'length dataset: {m}')
+        
+        self.train_data, self.val_data = random_split(self.train_dataset, self.split)
+
+        # The dataloaders handle shuffling, batching, etc...
+        self.train_loader = torch.utils.data.DataLoader(self.train_data, batch_size=self.batch_size, shuffle=True)
+        self.valid_loader = torch.utils.data.DataLoader(self.val_data, batch_size=self.batch_size)
+        self.test_loader = torch.utils.data.DataLoader(self.test_dataset, batch_size=self.batch_size, shuffle=True)
+
 
