@@ -5,12 +5,8 @@ from NEW_variational_autoencoder import *
 
 """ TO DO:
    
-      - Find out what test_dataset is supposed to be (its an argument in plot_ae_outputs())
       - make save_model and load_model into methods in the vae class
       - make train_model a method within vae class, too. Then you can put device and everything in there.
-      - need to find out how to load only parts of someone elses trained network, like VGG16
-         - Then use this for a latent similarity loss function
-            - Make it an option in training.
 
 
 """

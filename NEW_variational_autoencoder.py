@@ -1,7 +1,30 @@
-
+import numpy as np
+import os
+import pickle
+import matplotlib.pyplot as plt
 import torch
 from torch import nn
+import torchvision
+import torchvision.models as pretrained_models
 import torch.nn.functional as F
+
+
+class PerceptualLoss(nn.Module):
+    def __init__(self):
+        super(PerceptualLoss, self).__init__()
+        # Load pretrained VGG16 and get the needed layer
+        vgg = pretrained_models.vgg16(pretrained=True).features
+        self.vgg_slice = nn.Sequential(*list(vgg.children())[:4]).eval() # Use up to the second convolutional layer
+        for param in self.vgg_slice.parameters():
+            param.requires_grad = False
+
+    def forward(self, x, y):
+        # Compute feature representations
+        x_features = self.vgg_slice(x)
+        y_features = self.vgg_slice(y)
+        # Compute the Mean Squared Error in feature space
+        return F.mse_loss(x_features, y_features)
+
 
 class VariationalEncoder(nn.Module):
     def __init__(self, latent_dims):
@@ -99,11 +122,26 @@ class Decoder(nn.Module):
     
 
 class VariationalAutoencoder(nn.Module):
-    def __init__(self, latent_dims):
+    def __init__(self, latent_dims, optimizer):
         super(VariationalAutoencoder, self).__init__()
         self.encoder = VariationalEncoder(latent_dims)
         self.decoder = Decoder(latent_dims)
+        self.perceptual_loss = PerceptualLoss()
+        self.optimizer = optimizer
 
     def forward(self, x):
         z = self.encoder(x)
         return self.decoder(z)
+    
+    def back_prop(self, x):
+        x_hat = self.forward(x)
+        # Evaluate loss
+        loss = self.perceptual_loss(x, x_hat) + self.encoder.kl
+        # Backward pass
+        self.optimizer.zero_grad()
+        loss.backward()
+        self.optimizer.step()
+
+        return loss
+
+
