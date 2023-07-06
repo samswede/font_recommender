@@ -53,18 +53,23 @@ def main(config):
     optim = torch.optim.Adam(vae.parameters(), lr= learning_rate, weight_decay= weight_decay)
     vae.set_optimizer(optim)
 
+    print('Successfully built trainer class')
+
     trainer = Trainer(dataset_path= dataset_path, device= device)
     
+    print('Successfully built trainer class')
+
     # Put model onto GPU if it exists
     vae.to(device)
     
-
+    print('Starting training')
     for epoch in range(num_epochs):
         train_loss = trainer.train_epoch(vae)
         val_loss = trainer.test_epoch(vae)
         if print_performance_epoch_interval-1 == epoch % print_performance_epoch_interval:
             print(f'\n EPOCH {epoch + 1}/{num_epochs} \n \t train loss {train_loss} \n \t val loss {val_loss}')
             plot_ae_outputs(vae.encoder, vae.decoder, trainer.test_dataset, device, n=9)
+            visualize_first_layer_filters(vae)
         if model_save_epoch_interval-1 == epoch % model_save_epoch_interval:
             model_file_name = model_file_naming_convention(model_size, latent_dims, epoch)
             save_model(vae, model_file_name, model_save_folder_path)

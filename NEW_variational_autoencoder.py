@@ -23,16 +23,22 @@ class PerceptualLoss(nn.Module):
         vgg16_model.load_state_dict(vgg16_state_dict)
 
         # Get the needed layer (features part up to the second convolutional layer)
-        self.vgg_slice = nn.Sequential(*list(vgg16_model.features.children())[:4]).eval()
+        layer_depth = 4
+        self.vgg_slice = nn.Sequential(*list(vgg16_model.features.children())[:layer_depth]).eval()
 
         # Freeze the parameters of the vgg_slice layers
         for param in self.vgg_slice.parameters():
             param.requires_grad = False
 
     def forward(self, x, y):
+        # Convert the grayscale images to 3-channel images
+        x = x.repeat(1, 3, 1, 1)
+        y = y.repeat(1, 3, 1, 1)
+
         # Compute feature representations
         x_features = self.vgg_slice(x)
         y_features = self.vgg_slice(y)
+
         # Compute the Mean Squared Error in feature space
         return F.mse_loss(x_features, y_features)
 
