@@ -1,3 +1,9 @@
+# Ignore models because they are too large for github
+models/
+# Ignore data because in total >1GB for github repo
+data/
+
+
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[cod]
