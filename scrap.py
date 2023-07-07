@@ -2,14 +2,6 @@
 #%%
 from train import *
 
-""" TO DO:
-    - VGG16 expects 3 channels, not grayscale.
-        Either need a new model or find another solution. 
-        Probably new model.
-
-"""
-
-
 config = {
         'dataset_path': '/Users/samuelandersson/Dev/github_projects/font_recommender/data/fonts/Aa_improved',
 
@@ -22,11 +14,13 @@ config = {
         'model_save_folder_path': './models',
         'vgg16_model_path': './models/vgg16.pth',
 
-        'model_save_epoch_interval': 2,
+        'model_save_epoch_interval': 1,
         'print_performance_epoch_interval': 1
     }
 
 main(config)
+
+
 # %%
 from NEW_variational_autoencoder import *
 

@@ -160,3 +160,135 @@ def visualize_first_layer_filters(vae, num_filters_to_plot=8):
     plt.tight_layout()
     plt.show()
 
+def visualize_first_layer_filter_outputs(vae, test_dataset, device, num_filters_to_plot=8):
+    """ 
+    Visualizes the output of applying each filter in the first convolutional layer of the Variational Autoencoder (VAE) to a randomly sampled image from the test dataset.
+    
+    Parameters
+    ----------
+    vae : VariationalAutoencoder
+        The trained Variational Autoencoder model.
+        
+    test_dataset : Dataset
+        The test dataset to sample the image from.
+        
+    device : Device
+        The device (CPU or GPU) where the computations will take place.
+        
+    num_filters_to_plot : int, optional
+        The number of filter outputs to display. The default value is 8, which corresponds to all filters in the first layer.
+    """
+    # Make sure that the first layer of the encoder part of the VAE is a Conv2d layer
+    assert isinstance(vae.encoder.encoder_conv1[0], nn.Conv2d)
+
+    # Randomly sample an image from the test dataset
+    img_index = np.random.randint(len(test_dataset))
+    img = test_dataset[img_index][0].unsqueeze(0).to(device)
+    
+    # Get the first Conv2d layer
+    first_layer = vae.encoder.encoder_conv1[0]
+
+    # Apply the filters to the image and get the output
+    output = first_layer(img)[0].detach().cpu().numpy()
+
+    # Calculate the number of rows needed
+    rows = num_filters_to_plot // 4
+
+    # Create subplots
+    fig, axs = plt.subplots(rows, 4, figsize=(10, rows*2.5))
+
+    # Flatten the axes
+    axs = axs.flatten()
+    
+    # Go over each subplot and plot the corresponding filter output
+    for i in range(num_filters_to_plot):
+        axs[i].imshow(output[i], cmap='gray')
+        axs[i].axis('off')
+        axs[i].set_title(f'Filter {i+1} Output')
+        
+    # Delete unused subplots
+    for i in range(num_filters_to_plot, len(axs)):
+        fig.delaxes(axs[i])
+    
+    plt.tight_layout()
+    plt.show()
+
+def visualize_deeper_layer_filter_outputs(vae, test_dataset, device, layer_index, num_filters_to_plot=16):
+    """ 
+    Visualizes the output of applying each filter in the specified convolutional layer of the Variational Autoencoder (VAE) to a randomly sampled image from the test dataset.
+    
+    Parameters
+    ----------
+    vae : VariationalAutoencoder
+        The trained Variational Autoencoder model.
+        
+    test_dataset : Dataset
+        The test dataset to sample the image from.
+        
+    device : Device
+        The device (CPU or GPU) where the computations will take place.
+        
+    layer_index : int
+        The index of the convolutional layer to visualize. Indexing starts from 0. Here are the possible values:
+        - 0: The first Conv2d layer in the encoder_conv1 block (out_channels=8).
+        - 1: The second Conv2d layer in the encoder_conv1 block (out_channels=16).
+        - 2: The first Conv2d layer in the encoder_conv2 block (out_channels=128).
+        - 3: The second Conv2d layer in the encoder_conv2 block (out_channels=256).
+        Please note that for layers with a large number of filters, it's recommended to keep num_filters_to_plot relatively small.
+
+    num_filters_to_plot : int, optional
+        The number of filter outputs to display. The default value is 16. Here are the possible values for each layer:
+        - Layer 0: Any value from 1 to 8.
+        - Layer 1: Any value from 1 to 16.
+        - Layer 2: Any value from 1 to 128.
+        - Layer 3: Any value from 1 to 256.
+        It's recommended to keep this number relatively small (e.g., 16 or 32), as deeper layers can have a large number of filters (e.g., 256), and visualizing them all at once can be overwhelming.
+    """
+    # Get all the Conv2d layers in the encoder
+    conv_layers = [module for module in vae.encoder.modules() if isinstance(module, nn.Conv2d)]
+
+    # Make sure the layer index is valid
+    assert layer_index < len(conv_layers), "Invalid layer index"
+
+    # Randomly sample an image from the test dataset
+    img_index = np.random.randint(len(test_dataset))
+    img = test_dataset[img_index][0].unsqueeze(0).to(device)
+
+    # Define a function to apply a sequential block to an input tensor
+    def apply_sequential_block(block, x):
+        for layer in block:
+            x = layer(x)
+        return x
+
+    # Apply the layers of the encoder one by one until reaching the specified layer
+    x = img
+    if layer_index < 4:  # The layer is in the encoder_conv1 block
+        x = apply_sequential_block(vae.encoder.encoder_conv1[:layer_index+1], x)
+    else:  # The layer is in the encoder_conv2 block
+        x = apply_sequential_block(vae.encoder.encoder_conv1, x)  # Apply the whole encoder_conv1 block
+        x = apply_sequential_block(vae.encoder.encoder_conv2[:layer_index-3], x)
+
+    # Get the output of applying the filters to the image
+    output = x[0].detach().cpu().numpy()
+
+    # Calculate the number of rows needed
+    rows = num_filters_to_plot // 4
+
+    # Create subplots
+    fig, axs = plt.subplots(rows, 4, figsize=(10, rows*2.5))
+
+    # Flatten the axes
+    axs = axs.flatten()
+
+    # Go over each subplot and plot the corresponding filter output
+    for i in range(num_filters_to_plot):
+        axs[i].imshow(output[i], cmap='gray')
+        axs[i].axis('off')
+        axs[i].set_title(f'Filter {i+1} Output')
+
+    # Delete unused subplots
+    for i in range(num_filters_to_plot, len(axs)):
+        fig.delaxes(axs[i])
+
+    plt.tight_layout()
+    plt.show()

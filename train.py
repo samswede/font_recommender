@@ -4,11 +4,6 @@ from NEW_variational_autoencoder import *
 from trainer import Trainer
 
 """ TO DO:
-   
-      - make save_model and load_model into methods in the vae class
-      - make train_model a method within vae class, too. Then you can put device and everything in there.
-
-
 """
 
 
@@ -70,6 +65,9 @@ def main(config):
             print(f'\n EPOCH {epoch + 1}/{num_epochs} \n \t train loss {train_loss} \n \t val loss {val_loss}')
             plot_ae_outputs(vae.encoder, vae.decoder, trainer.test_dataset, device, n=9)
             visualize_first_layer_filters(vae)
+            visualize_deeper_layer_filter_outputs(vae, trainer.test_dataset, device, layer_index=1, num_filters_to_plot=8)
+            visualize_deeper_layer_filter_outputs(vae, trainer.test_dataset, device, layer_index=2, num_filters_to_plot=8)
+            visualize_deeper_layer_filter_outputs(vae, trainer.test_dataset, device, layer_index=3, num_filters_to_plot=8)
         if model_save_epoch_interval-1 == epoch % model_save_epoch_interval:
             model_file_name = model_file_naming_convention(model_size, latent_dims, epoch)
             save_model(vae, model_file_name, model_save_folder_path)

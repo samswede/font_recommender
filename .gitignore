@@ -2,7 +2,7 @@
 models/
 # Ignore data because in total >1GB for github repo
 data/
-
+results/
 
 # Byte-compiled / optimized / DLL files
 __pycache__/
