@@ -6,9 +6,9 @@ from torch.utils.data import DataLoader,random_split
 
 
 class Trainer():
-    def __init__(self, dataset_path, device):
+    def __init__(self, dataset_path, device, batch_size = 32):
 
-        self.batch_size = 32
+        self.batch_size = batch_size
         self.image_size = (128, 128)
         
         #split = [int(m*0.9), int(m*0.1)]
