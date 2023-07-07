@@ -292,3 +292,47 @@ def visualize_deeper_layer_filter_outputs(vae, test_dataset, device, layer_index
 
     plt.tight_layout()
     plt.show()
+
+
+def moving_average(x, window_size):
+    return np.convolve(x, np.ones(window_size)/window_size, mode='valid')
+
+def moving_std(x, window_size):
+    ret = np.cumsum(x, dtype=float)
+    ret[window_size:] = ret[window_size:] - ret[:-window_size]
+    sq = (ret[window_size - 1:] ** 2) / window_size
+    mean_sq = sq - ((ret[window_size - 1:] - ret[:-window_size + 1]) ** 2) / window_size ** 2
+    return np.sqrt(mean_sq / (window_size - 1))
+
+def plot_loss_progression(train_losses, val_losses, window_size=50):
+    """
+    This function receives lists of training and validation losses and plots them.
+    It applies a moving average filter for smoothing and also calculates the moving standard deviation.
+    """
+    # Check if there's enough data to apply a moving average
+    if len(train_losses) >= window_size:
+        # Apply moving average and moving standard deviation
+        train_losses_smooth = moving_average(train_losses, window_size)
+        val_losses_smooth = moving_average(val_losses, window_size)
+        train_losses_std = moving_std(train_losses, window_size)
+        val_losses_std = moving_std(val_losses, window_size)
+        # Generate x values
+        x_values = np.arange(window_size - 1, len(train_losses))
+    else:
+        train_losses_smooth = train_losses
+        val_losses_smooth = val_losses
+        train_losses_std = np.zeros(len(train_losses))
+        val_losses_std = np.zeros(len(val_losses))
+        x_values = np.arange(len(train_losses))
+
+    # Create plot
+    plt.figure(figsize=(10, 5))
+    plt.plot(x_values, train_losses_smooth, label='Training Loss')
+    plt.fill_between(x_values, train_losses_smooth - train_losses_std, train_losses_smooth + train_losses_std, alpha=0.2)
+    plt.plot(x_values, val_losses_smooth, label='Validation Loss')
+    plt.fill_between(x_values, val_losses_smooth - val_losses_std, val_losses_smooth + val_losses_std, alpha=0.2)
+    plt.xlabel('Epoch')
+    plt.ylabel('Loss')
+    plt.legend(loc='upper right')
+    plt.title('Progression of Training and Validation Losses Over Time')
+    plt.show()

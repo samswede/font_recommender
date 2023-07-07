@@ -55,9 +55,17 @@ def main(config):
     vae.to(device)
     
     print('Starting training')
+
+    train_losses = []
+    val_losses = []
+
     for epoch in range(num_epochs):
         train_loss = trainer.train_epoch(vae)
         val_loss = trainer.test_epoch(vae)
+
+        train_losses.append(train_loss)
+        val_losses.append(val_loss)
+
         if print_performance_epoch_interval-1 == epoch % print_performance_epoch_interval:
             print(f'\n EPOCH {epoch + 1}/{num_epochs} \n \t train loss {train_loss} \n \t val loss {val_loss}')
             plot_ae_outputs(vae.encoder, vae.decoder, trainer.test_dataset, device, n=9)
@@ -65,6 +73,8 @@ def main(config):
             visualize_deeper_layer_filter_outputs(vae, trainer.test_dataset, device, layer_index=1, num_filters_to_plot=8)
             visualize_deeper_layer_filter_outputs(vae, trainer.test_dataset, device, layer_index=2, num_filters_to_plot=8)
             visualize_deeper_layer_filter_outputs(vae, trainer.test_dataset, device, layer_index=3, num_filters_to_plot=8)
+            plot_loss_progression(train_losses, val_losses, window_size=10)
+
         if model_save_epoch_interval-1 == epoch % model_save_epoch_interval:
             model_file_name = model_file_naming_convention(model_size, latent_dims, epoch)
             save_model(vae, model_file_name, model_save_folder_path)
