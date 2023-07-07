@@ -164,10 +164,26 @@ class VariationalAutoencoder(nn.Module):
         z = self.encoder(x)
         return self.decoder(z)
     
-    def back_prop(self, x):
+    def back_prop(self, x, beta):
+        """
+        This function performs the backpropagation for the VAE. It calculates the loss, performs a backward pass,
+        and updates the model parameters.
+
+        Parameters:
+        x: the input image tensor
+
+        beta: the weighting term for the KL-divergence loss. This parameter controls the balance between the 
+        reconstruction loss (Perceptual Loss) and the KL-divergence loss which measures the difference between 
+        the learned latent variable distribution and a prior distribution. 
+        A higher value of beta will give more importance to the KL-divergence loss and less to the reconstruction loss.
+        This could be adjusted based on the use case.
+
+        Note:   beta is expected to be a tensor on the same device as the rest of the tensors
+        """
+
         x_hat = self.forward(x)
         # Evaluate loss
-        loss = self.perceptual_loss(x, x_hat) + self.encoder.kl
+        loss = self.perceptual_loss(x, x_hat) + beta * self.encoder.kl
         # Backward pass
         self.optimizer.zero_grad()
         loss.backward()

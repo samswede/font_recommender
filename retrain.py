@@ -26,6 +26,7 @@ def main(config):
     learning_rate = config['learning_rate']
     weight_decay = config['weight_decay']
     batch_size = config['batch_size']
+    beta = config['beta']
 
     num_epochs = config['num_epochs']
 
@@ -76,8 +77,8 @@ def main(config):
 
         print(f'epoch {epoch}/{num_epochs}')
 
-        train_loss = trainer.train_epoch(vae)
-        val_loss = trainer.test_epoch(vae)
+        train_loss = trainer.train_epoch(vae, beta)
+        val_loss = trainer.test_epoch(vae, beta)
 
         train_losses.append(train_loss)
         val_losses.append(val_loss)
@@ -104,6 +105,8 @@ if __name__ == "__main__":
         'batch_size': 32,
         'learning_rate': 0.00005,
         'weight_decay': 1e-5,
+        'beta': 1,
+
         'model_size': 'big', 
 
         'model_save_folder_path': '',

@@ -26,26 +26,32 @@ class Trainer():
     def set_image_size(self, image_size):
         self.image_size = image_size
 
-    def train_epoch(self, model):
+    def train_epoch(self, model, beta= 1):
         """
         """
         train_loss = 0.0
+
+        # Create weighting term to balance KL-divergence loss
+        beta = torch.tensor(beta).type(model.encoder.kl.dtype).to(model.encoder.kl.device)
 
         # Iterate the dataloader (we do not need the label values, this is unsupervised learning)
         for x, _ in self.train_loader: 
             # Move tensor to the proper device
             x = x.to(self.device)
             # Forward pass and Backpropagation
-            loss = model.back_prop(x)
+            loss = model.back_prop(x, beta)
             # Accumulate the batch loss
             train_loss += loss.item()
         # Return the average loss
         return train_loss / self.size_dataset
     
-    def test_epoch(self, model):
+    def test_epoch(self, model, beta= 1):
         """
         """
         val_loss = 0.0
+
+        # Create weighting term to balance KL-divergence loss
+        beta = torch.tensor(beta).type(model.encoder.kl.dtype).to(model.encoder.kl.device)
 
         with torch.no_grad(): # No need to track the gradients
             for x, _ in self.test_loader:
@@ -53,8 +59,9 @@ class Trainer():
                 x = x.to(self.device)
                 # Forward pass through the VAE
                 x_hat = model.forward(x)
+
                 # Compute the loss
-                loss = model.perceptual_loss(x, x_hat) + model.encoder.kl
+                loss = model.perceptual_loss(x, x_hat) + beta * model.encoder.kl
                 # Accumulate the batch loss
                 val_loss += loss.item()
         # Return the average loss
