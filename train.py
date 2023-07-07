@@ -3,9 +3,6 @@ from utils import *
 from NEW_variational_autoencoder import *
 from trainer import Trainer
 
-""" TO DO:
-"""
-
 
 # Define the naming convention
 def model_file_naming_convention(model_size, latent_dims, epoch):

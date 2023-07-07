@@ -90,7 +90,8 @@ class VariationalEncoder(nn.Module):
         log_sigma = self.linear3(x)
         sigma = torch.exp(log_sigma)
 
-        z = mu + sigma*self.N.sample(mu.shape)
+        # Specify the device in the sample method
+        z = mu + sigma*self.N.sample(mu.shape).to(x.device)
         self.kl = (-0.5 * torch.sum(1 + log_sigma - mu.pow(2) - sigma.pow(2))).mean()
 
         return z
