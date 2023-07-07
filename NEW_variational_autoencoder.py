@@ -86,12 +86,23 @@ class VariationalEncoder(nn.Module):
         x = self.flatten(x)
         x = F.relu(self.linear1(x))
 
+        # The output is then split into two paths. One path goes through another linear layer to produce "mu",
+        # which represents the mean of the latent variable distribution.
+        # The other path goes through a separate linear layer to produce "log_sigma",
+        # which represents the log of the standard deviation of the latent variable distribution.
         mu = self.linear2(x)
         log_sigma = self.linear3(x)
+
+        # We then convert "log_sigma" to "sigma" by applying the exponential function to it.
         sigma = torch.exp(log_sigma)
 
-        # Specify the device in the sample method
+        # We sample from the standard normal distribution, multiply it by "sigma" and add "mu".
+        # This produces a sample from the latent variable distribution.
+        # The sample is forced to be on the same device (CPU or GPU) as the input tensor to avoid any runtime errors.
         z = mu + sigma*self.N.sample(mu.shape).to(x.device)
+
+        # The KL divergence between the latent variable distribution and the standard normal distribution
+        # is then computed and stored. This is used as part of the loss function during training.
         self.kl = (-0.5 * torch.sum(1 + log_sigma - mu.pow(2) - sigma.pow(2))).mean()
 
         return z
