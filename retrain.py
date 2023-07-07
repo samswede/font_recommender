@@ -73,6 +73,9 @@ def main(config):
     start_epoch = int(re.search(r'E(\d+)\.pt$', pretrained_model_file_name).group(1))
 
     for epoch in range(start_epoch, start_epoch + num_epochs):
+
+        print(f'epoch {epoch}/{num_epochs}')
+
         train_loss = trainer.train_epoch(vae)
         val_loss = trainer.test_epoch(vae)
 
