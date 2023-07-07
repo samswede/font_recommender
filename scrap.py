@@ -20,28 +20,3 @@ config = {
 
 main(config)
 
-
-# %%
-from NEW_variational_autoencoder import *
-
-vgg16_model_path = './models/vgg16.pth'
-perceptual_loss = PerceptualLoss(vgg16_model_path)
-# %%
-
-vgg16 = torch.load("./models/vgg16.pth")
-
-# %%
-import torch
-from torchvision import models
-
-# Initialize the model
-vgg16_model = models.vgg16()
-
-# Load the state_dict from the file
-vgg16_state_dict = torch.load("./models/vgg16.pth")
-
-# Update the model's state_dict
-vgg16_model.load_state_dict(vgg16_state_dict)
-
-
-# %%
