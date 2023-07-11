@@ -1,0 +1,37 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <style>
+        #container {
+            width: 100vw;
+            height: 400px;
+            overflow: auto;
+            white-space: nowrap;
+        }
+        #content {
+            height: 400px;
+            width: 400vw;
+            background: url('https://e1.pxfuel.com/desktop-wallpaper/710/220/desktop-wallpaper-the-skill-tree-nebula-skyrim-skill.jpg'); 
+            background-size: 400vw 400px;
+            display: inline-block;
+        }
+    </style>
+</head>
+<body>
+    <div id="container">
+        <div id="content"></div>
+    </div>
+    <script>
+        var container = document.getElementById('container');
+        var content = document.getElementById('content');
+
+        setInterval(function() {
+            if (container.scrollLeft >= (content.offsetWidth - container.offsetWidth)) {
+                container.scrollLeft = 0;
+            } else {
+                container.scrollLeft++;
+            }
+        }, 100); // Adjust this value to change the scroll speed
+    </script>
+</body>
+</html>

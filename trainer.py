@@ -32,7 +32,9 @@ class Trainer():
         train_loss = 0.0
 
         # Create weighting term to balance KL-divergence loss
-        beta = torch.tensor(beta).type(model.encoder.kl.dtype).to(model.encoder.kl.device)
+        #beta = torch.tensor(beta).type(model.encoder.kl.dtype).to(model.encoder.kl.device)
+        #beta = torch.tensor(beta).to(model.encoder.kl.device)
+        beta = torch.tensor(beta).to(model.encoder.device)
 
         # Iterate the dataloader (we do not need the label values, this is unsupervised learning)
         for x, _ in self.train_loader: 
