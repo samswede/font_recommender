@@ -6,7 +6,7 @@ import matplotlib.pyplot as plt
 import torch
 from torch import nn
 import torchvision
-import torchvision.models as pretrained_models
+#import torchvision.models as pretrained_models
 import torch.nn.functional as F
 
 """TO DO:

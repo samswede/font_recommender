@@ -92,6 +92,7 @@ def create_image_embedding(font_image_file_name, font_images_path, transform_nor
 
     return embedding_numpy
 
+
 def combine_all_embeddings_into_array(font_images_path, model, transform_norm):
     file_list = [file for file in os.listdir(font_images_path) if file.endswith('.png')]
 
@@ -127,6 +128,7 @@ dataset_path = './data/fonts/Aa_improved/'
 train_loader, valid_loader, test_loader, train_dataset, test_dataset, transform_norm = prepare_data_loaders(dataset_path)
 
 #%%
+
 all_font_images_path = './data/fonts/all_font_images/'
 font_name_to_index, all_font_embeddings = combine_all_embeddings_into_array(font_images_path= all_font_images_path, model= vae.model, transform_norm= transform_norm)
 
@@ -202,3 +204,21 @@ list_of_font_candidates = [
 
 print(list_of_font_candidates)
 # %%
+#====================================================================================================================
+# Define core recommendation function
+#====================================================================================================================
+
+
+def precompute_all_font_recommendations():
+    all_font_recommendations = []
+    
+    for font_label in dict_font_labels_to_indices.keys():
+        font_candidates = get_similar_fonts(font_label)
+        all_font_recommendations.append([font_label] + font_candidates)
+
+    df = pd.DataFrame(all_font_recommendations)
+    df.to_csv('drug_candidates.csv', index=False)
+
+
+print('Computing font recommendations csv')
+precompute_all_font_recommendations()
