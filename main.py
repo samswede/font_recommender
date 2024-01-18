@@ -1,3 +1,6 @@
+# Run the following command in terminal
+# uvicorn main:app --reload
+
 
 # Import webapp libraries
 from fastapi import FastAPI, Request
